@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Search Results</title>
+</head>
+<body>
+    <h1>Search Results</h1>
+    {% if results %}
+        <ul>
+        {% for result in results %}
+            <li>
+                <h3>{{ result.video_title }}</h3>
+                <p>Start time: {{ result.start_time }}</p>
+                <p>End time: {{ result.end_time }}</p>
+                <p>Transcript: {{ result.transcript }}</p>
+                {% if result.thumbnail_url %}
+                    <img src="{{ result.thumbnail_url }}" alt="Thumbnail">
+                {% endif %}
+            </li>
+        {% endfor %}
+        </ul>
+    {% else %}
+        <p>No results found.</p>
+    {% endif %}
+    <a href="/">Back to Search</a>
+</body>
+</html>
