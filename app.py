@@ -52,15 +52,22 @@ def print_page(page):
     for clip in page:
         print(f"video_id={clip.video_id} score={clip.score}")
         #print(clip)
+@app.errorhandler(500)
+def server_error(e):
+    return jsonify({"error": str(e)}), 500
 @app.route('/', methods=['GET', 'POST'])
 def search_page():
-    query = request.args.get('query', '')
-    return render_template('search_results.html', query=query)
+    try:
+        query = request.args.get('query', '')
+        return render_template('search_results.html', query=query)
+    except Exception as e:
+        app.logger.error(e)
+        return jsonify({"error": str(e)}), 500
 @app.route('/api/search', methods=['POST'])
 def search_videos():
     data = request.get_json()
     query = data.get('query', '')
-    response = client.search.query(INDEX_ID, query_text=query, options=['visual','text_in_video'],page_limit=10)
+    response = client.search.query(INDEX_ID, query_text=query, options=['visual','text_in_video'],page_limit=1)
     results = []
     print_page(response.data)
     results.extend(map(serialize_clip, response.data))
@@ -125,6 +132,7 @@ def update_votes():
         'upvotes': upvotes,
         'downvotes': downvotes
     })
+
 
 
 if __name__ == '__main__':

@@ -265,6 +265,7 @@
 
                 hls.on(Hls.Events.MANIFEST_PARSED, function() {
                     videoPlayer.currentTime = parseFloat(startTime);
+                    console.log(startTime);
                     const playPromise = videoPlayer.play();
                     
                     if (playPromise !== undefined) {
@@ -298,6 +299,7 @@
                  // Set up event listener to stop video at end time
                  videoPlayer.addEventListener('timeupdate', function() {
                     if (this.currentTime >= parseFloat(endTime)) {
+                        this.currentTime = 0;
                         this.pause();
                     }
                 });
@@ -391,6 +393,7 @@
             document.getElementById('upvote-count').innerHTML = upvoteCount;
             document.getElementById('downvote-count').innerHTML = downvoteCount;
             videoPlayer.currentTime = parseFloat(startTime);
+            console.log(startTime);
             videoPlayer.play().catch(error => console.error('Error playing video:', error));
         });
     } else if (videoPlayer.canPlayType('application/vnd.apple.mpegurl')) {
@@ -403,7 +406,7 @@
 
     videoPlayer.addEventListener('timeupdate', function() {
         if (this.currentTime >= parseFloat(endTime)) {
-            nextVideo();
+            
         }
     });
 
@@ -417,6 +420,7 @@
     }
 
     function prevVideo() {
+    
         currentVideoIndex = (currentVideoIndex - 1 + currentVideos.length) % currentVideos.length;
         const video = currentVideos[currentVideoIndex];
         playVideo(video.video_url, video.start_time, video.end_time, currentVideos, currentVideoIndex);
