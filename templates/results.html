@@ -13,8 +13,9 @@
             <li>
                 <h3>Video ID: {{ clip.video_id }}</h3>
                 <p>Score: {{ clip.score }}</p>
-                <p>Start time: {{ clip.start_time }}</p>
-                <p>End time: {{ clip.end_time }}</p>
+                <p>Start time: {{ clip.start }}</p>
+                <p>End time: {{ clip.end }}</p>
+                <p>"metadata: {{clip.metadata}}"</p>
                 {% if clip.thumbnail_url %}
                     <img src="{{ clip.thumbnail_url }}" alt="Thumbnail">
                 {% endif %}

@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Videos</title>
+</head>
+<body>
+    <h1>Videos</h1>
+    {% if videos %}
+        <ul>
+        {% for video in videos %}
+            <li>
+                <h3>Video ID: {{ video.video_id }}</h3>
+                <p>Upvotes: {{video.upvote}}</p>
+                <p>Downvotes: {{video.downvote}}</p>
+            </li>
+        {% endfor %}
+        </ul>
+    {% else %}
+        <p>No videos found.</p>
+    {% endif %}
+   
+</body>
+</html>

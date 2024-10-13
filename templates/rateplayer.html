@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TikTok-style Video Player</title>
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            overflow: hidden;
+        }
+        #video-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+        }
+        video {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .controls {
+            position: fixed;
+            right: 20px;
+            bottom: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            z-index: 10;
+        }
+        .control-button {
+            background-color: rgba(255, 255, 255, 0.5);
+            border: none;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            margin: 10px;
+            font-size: 24px;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .control-button:focus {
+            outline: none;
+        }
+        #upvote-count, #downvote-count {
+            color: white;
+            font-size: 16px;
+            margin-top: 5px;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+        }
+    </style>
+</head>
+<body>
+    <div id="video-container">
+        <video id="video-player" autoplay loop muted>
+            <source src="" type="video/mp4">
+            Your browser does not support the video tag.
+        </video>
+        <div class="controls">
+            <button id="upvote-btn" class="control-button">👍</button>
+            <div id="upvote-count">0</div>
+            <button id="downvote-btn" class="control-button">👎</button>
+            <div id="downvote-count">0</div>
+        </div>
+    </div>
+
+    <script>
+        const videoPlayer = document.getElementById('video-player');
+        const upvoteBtn = document.getElementById('upvote-btn');
+        const downvoteBtn = document.getElementById('downvote-btn');
+        const upvoteCount = document.getElementById('upvote-count');
+        const downvoteCount = document.getElementById('downvote-count');
+
+        const videos = {{ videos|tojson|safe }};
+        let currentVideoIndex = 0;
+        const votes = videos.map(() => ({ upvotes: 0, downvotes: 0 }));
+
+        function loadVideo(index) {
+            videoPlayer.src = videos[index];
+            videoPlayer.play().catch(e => console.error("Error playing video:", e));
+            updateVoteCounts();
+            console.log(`Loaded video ${index + 1} of ${videos.length}`);
+        }
+
+        function nextVideo() {
+            currentVideoIndex = (currentVideoIndex + 1) % videos.length;
+            loadVideo(currentVideoIndex);
+        }
+
+        function previousVideo() {
+            currentVideoIndex = (currentVideoIndex - 1 + videos.length) % videos.length;
+            loadVideo(currentVideoIndex);
+        }
+
+        function updateVoteCounts() {
+            upvoteCount.textContent = votes[currentVideoIndex].upvotes;
+            downvoteCount.textContent = votes[currentVideoIndex].downvotes;
+        }
+
+        upvoteBtn.addEventListener('click', () => {
+            votes[currentVideoIndex].upvotes++;
+            updateVoteCounts();
+        });
+
+        downvoteBtn.addEventListener('click', () => {
+            votes[currentVideoIndex].downvotes++;
+            updateVoteCounts();
+        });
+
+        let touchStartY = 0;
+        let touchEndY = 0;
+
+        document.addEventListener('touchstart', (e) => {
+            touchStartY = e.changedTouches[0].screenY;
+            console.log('Touch start:', touchStartY);
+        }, { passive: false });
+
+        document.addEventListener('touchmove', (e) => {
+            e.preventDefault(); // Prevent default scrolling
+        }, { passive: false });
+
+        document.addEventListener('touchend', (e) => {
+            touchEndY = e.changedTouches[0].screenY;
+            console.log('Touch end:', touchEndY);
+            handleSwipe();
+        }, { passive: false });
+
+        function handleSwipe() {
+            const swipeDistance = touchStartY - touchEndY;
+            console.log('Swipe distance:', swipeDistance);
+            if (swipeDistance > 50) {
+                console.log('Swiping up, next video');
+                nextVideo();
+            } else if (swipeDistance < -50) {
+                console.log('Swiping down, previous video');
+                previousVideo();
+            }
+        }
+
+        // Initial video load
+        loadVideo(currentVideoIndex);
+
+        // Add keyboard controls for testing on desktop
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowUp') {
+                nextVideo();
+            } else if (e.key === 'ArrowDown') {
+                previousVideo();
+            }
+        });
+    </script>
+</body>
+</html>
