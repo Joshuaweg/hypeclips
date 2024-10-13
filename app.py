@@ -1,11 +1,11 @@
+from flask import Flask, render_template, request, jsonify
 import os
-from urllib.parse import quote
-from flask import Flask, render_template, request
 from twelvelabs import TwelveLabs
 from twelvelabs.models.task import Task
 from pymongo.mongo_client import MongoClient
 from pymongo.server_api import ServerApi
 from db_client import AtlasClient
+import json
 
 app = Flask(__name__)
 
@@ -23,12 +23,20 @@ atlas_client = AtlasClient (db_uri, DB_NAME)
 atlas_client.ping()
 def serialize_clip(clip):
     """Convert clip object to a dictionary."""
+    id_to_url = json.loads(open("video_urls.json").read())
+    url = ""
+    if clip.video_id not in id_to_url:
+        url = ""
+    else:
+        url = id_to_url[clip.video_id]
+        
     return {
         'video_id': clip.video_id,
         'score': float(clip.score),
         'start_time': clip.start,
         'end_time': clip.end,
         'thumbnail_url': clip.thumbnail_url,
+        'video_url': url
     }
 def print_page(page):
     for clip in page:
@@ -71,7 +79,17 @@ def video_player():
     video_paths = ['/static/videos/' + f for f in video_files]
     
     return render_template('rateplayer.html', videos=video_paths)
-
+@app.route('/url')
+def get_url():
+    v_list = client.index.video.list(INDEX_ID, page_limit=50)
+    id_to_url = {}
+    for vid in v_list:
+        print(vid.id)
+        test = client.index.video.retrieve(index_id=INDEX_ID, id=vid.id)
+        url = test.hls.video_url
+        id_to_url[vid.id] = url
+    print(id_to_url)
+    return render_template('index.html')
 
 if __name__ == '__main__':
     app.run(debug=True)
