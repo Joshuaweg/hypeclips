@@ -1,5 +1,4 @@
 from pymongo import MongoClient
-
 class AtlasClient ():
 
    def __init__ (self, altas_uri, dbname):
@@ -27,3 +26,13 @@ class AtlasClient ():
        items = list(collection.find(filter=filter, limit=limit))
 
        return items
+   def insert (self, collection_name, item):
+
+       collection = self.database[collection_name]
+
+       collection.insert_one(item)
+   def update (self, collection_name, filter, update):
+
+       collection = self.database[collection_name]
+
+       collection.update_one(filter, update)

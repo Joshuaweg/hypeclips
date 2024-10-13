@@ -49,28 +49,18 @@
             justify-content: center;
             align-items: center;
         }
-        .control-button:focus {
-            outline: none;
-        }
-        #upvote-count, #downvote-count {
-            color: white;
-            font-size: 16px;
-            margin-top: 5px;
-            text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
-        }
     </style>
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
 </head>
 <body>
     <div id="video-container">
-        <video id="video-player" autoplay loop muted>
+        <video id="video-player" autoplay>
             <source src="" type="video/mp4">
             Your browser does not support the video tag.
         </video>
         <div class="controls">
             <button id="upvote-btn" class="control-button">👍</button>
-            <div id="upvote-count">0</div>
             <button id="downvote-btn" class="control-button">👎</button>
-            <div id="downvote-count">0</div>
         </div>
     </div>
 
@@ -78,18 +68,49 @@
         const videoPlayer = document.getElementById('video-player');
         const upvoteBtn = document.getElementById('upvote-btn');
         const downvoteBtn = document.getElementById('downvote-btn');
-        const upvoteCount = document.getElementById('upvote-count');
-        const downvoteCount = document.getElementById('downvote-count');
 
-        const videos = {{ videos|tojson|safe }};
-        let currentVideoIndex = 0;
-        const votes = videos.map(() => ({ upvotes: 0, downvotes: 0 }));
+        let currentRowIndex, currentVideoIndex, query;
+        let videos = [];
+
+        function loadVideoData() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const data = JSON.parse(decodeURIComponent(urlParams.get('data')));
+            currentRowIndex = data.rowIndex;
+            currentVideoIndex = data.videoIndex;
+            query = data.query;
+
+            fetch('/api/search', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ query: query }),
+            })
+            .then(response => response.json())
+            .then(data => {
+                videos = data[currentRowIndex];
+                loadVideo(currentVideoIndex);
+            })
+            .catch(error => console.error('Error:', error));
+        }
 
         function loadVideo(index) {
-            videoPlayer.src = videos[index];
-            videoPlayer.play().catch(e => console.error("Error playing video:", e));
-            updateVoteCounts();
-            console.log(`Loaded video ${index + 1} of ${videos.length}`);
+            const video = videos[index];
+            if (Hls.isSupported()) {
+                const hls = new Hls();
+                hls.loadSource(video.video_url);
+                hls.attachMedia(videoPlayer);
+                hls.on(Hls.Events.MANIFEST_PARSED, function() {
+                    videoPlayer.currentTime = parseFloat(video.start_time);
+                    videoPlayer.play().catch(e => console.error("Error playing video:", e));
+                });
+            } else if (videoPlayer.canPlayType('application/vnd.apple.mpegurl')) {
+                videoPlayer.src = video.video_url;
+                videoPlayer.addEventListener('loadedmetadata', function() {
+                    videoPlayer.currentTime = parseFloat(video.start_time);
+                    videoPlayer.play().catch(e => console.error("Error playing video:", e));
+                });
+            }
         }
 
         function nextVideo() {
@@ -102,62 +123,47 @@
             loadVideo(currentVideoIndex);
         }
 
-        function updateVoteCounts() {
-            upvoteCount.textContent = votes[currentVideoIndex].upvotes;
-            downvoteCount.textContent = votes[currentVideoIndex].downvotes;
-        }
-
-        upvoteBtn.addEventListener('click', () => {
-            votes[currentVideoIndex].upvotes++;
-            updateVoteCounts();
-        });
-
-        downvoteBtn.addEventListener('click', () => {
-            votes[currentVideoIndex].downvotes++;
-            updateVoteCounts();
-        });
-
         let touchStartY = 0;
         let touchEndY = 0;
 
         document.addEventListener('touchstart', (e) => {
             touchStartY = e.changedTouches[0].screenY;
-            console.log('Touch start:', touchStartY);
         }, { passive: false });
 
         document.addEventListener('touchmove', (e) => {
-            e.preventDefault(); // Prevent default scrolling
+            e.preventDefault();
         }, { passive: false });
 
         document.addEventListener('touchend', (e) => {
             touchEndY = e.changedTouches[0].screenY;
-            console.log('Touch end:', touchEndY);
             handleSwipe();
         }, { passive: false });
 
         function handleSwipe() {
             const swipeDistance = touchStartY - touchEndY;
-            console.log('Swipe distance:', swipeDistance);
             if (swipeDistance > 50) {
-                console.log('Swiping up, next video');
                 nextVideo();
             } else if (swipeDistance < -50) {
-                console.log('Swiping down, previous video');
                 previousVideo();
             }
         }
 
-        // Initial video load
-        loadVideo(currentVideoIndex);
-
-        // Add keyboard controls for testing on desktop
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'ArrowUp') {
+        videoPlayer.addEventListener('timeupdate', function() {
+            const currentVideo = videos[currentVideoIndex];
+            if (this.currentTime >= parseFloat(currentVideo.end_time)) {
                 nextVideo();
-            } else if (e.key === 'ArrowDown') {
-                previousVideo();
             }
         });
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowUp') {
+                previousVideo();
+            } else if (e.key === 'ArrowDown') {
+                nextVideo();
+            }
+        });
+
+        loadVideoData();
     </script>
 </body>
 </html>

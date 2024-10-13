@@ -23,6 +23,13 @@ atlas_client = AtlasClient (db_uri, DB_NAME)
 atlas_client.ping()
 def serialize_clip(clip):
     """Convert clip object to a dictionary."""
+    db_results = atlas_client.find(COLLECTION_NAME, filter={'video_id': clip.video_id})
+    #print(db_results[0]['upvote'])
+    if len(db_results) == 0:
+        atlas_client.insert(COLLECTION_NAME, {'video_id': clip.video_id, 'upvote': 0, 'downvote': 0})
+        db_results = atlas_client.find(COLLECTION_NAME, filter={'video_id': clip.video_id})
+    upvote = db_results[0]['upvote']
+    downvote = db_results[0]['downvote']
     id_to_url = json.loads(open("video_urls.json").read())
     url = ""
     if clip.video_id not in id_to_url:
@@ -36,7 +43,10 @@ def serialize_clip(clip):
         'start_time': clip.start,
         'end_time': clip.end,
         'thumbnail_url': clip.thumbnail_url,
-        'video_url': url
+        'video_url': url,
+        'upvote': upvote,
+        'downvote': downvote
+
     }
 def print_page(page):
     for clip in page:
@@ -50,7 +60,7 @@ def search_page():
 def search_videos():
     data = request.get_json()
     query = data.get('query', '')
-    response = client.search.query(INDEX_ID, query_text=query, options=['visual','text_in_video'])
+    response = client.search.query(INDEX_ID, query_text=query, options=['visual','text_in_video'],page_limit=10)
     results = []
     print_page(response.data)
     results.extend(map(serialize_clip, response.data))
@@ -90,6 +100,32 @@ def get_url():
         id_to_url[vid.id] = url
     print(id_to_url)
     return render_template('index.html')
+@app.route('/api/vote', methods=['POST'])
+def update_votes():
+    data = request.get_json()
+    video_id = data.get('videoId', '')
+    vote = data.get('voteType', '')
+    print(video_id)
+    print(vote)
+
+    # Get the current vote counts
+    video = atlas_client.database[COLLECTION_NAME].find_one({'video_id': video_id})
+    upvotes = video.get('upvote', 0)
+    downvotes = video.get('downvote', 0)
+
+    if vote == 'upvote':
+        upvotes += 1
+        atlas_client.update(COLLECTION_NAME, {'video_id': video_id}, {'$inc': {'upvote': 1}})
+    elif vote == 'downvote':
+        downvotes += 1
+        atlas_client.update(COLLECTION_NAME, {'video_id': video_id}, {'$inc': {'downvote': 1}})
+
+    return jsonify({
+        'status': 'success',
+        'upvotes': upvotes,
+        'downvotes': downvotes
+    })
+
 
 if __name__ == '__main__':
     app.run(debug=True)
